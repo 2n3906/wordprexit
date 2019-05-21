@@ -139,36 +139,37 @@ def convert_comments(post):
     comments = post.get('comments')
     if comments:
         for c in comments:
-            comment_dir = os.path.join('data', 'comments', post['hugo_uniqueid'])
-            comment_fn = 'wordpress-{}.json'.format(c.get('comment_id', 'UNKNOWN'))
-            comment_filepath = os.path.join(comment_dir, comment_fn)
-            comment_out = {}
+            if c.get('comment_approved'):
+                comment_dir = os.path.join('data', 'comments', post['hugo_uniqueid'])
+                comment_fn = 'wordpress-{}.json'.format(c.get('comment_id', 'UNKNOWN'))
+                comment_filepath = os.path.join(comment_dir, comment_fn)
+                comment_out = {}
 
-            h = html2text.HTML2Text()
-            h.wrap_links = 0
+                h = html2text.HTML2Text()
+                h.wrap_links = 0
 
-            comment_out['_id'] = hashlib.md5(str(c.get('comment_id')).encode('utf-8')).hexdigest()
-            if post.get('post_name'):
-                comment_out['_parent'] = post.get('post_name')
-            if 'comment_parent' in c and c['comment_parent'] != 0:
-                comment_out['reply_to'] = hashlib.md5(str(c.get('comment_parent')).encode('utf-8')).hexdigest()
-            comment_out['date'] = c.get('comment_date_gmt', datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)).isoformat()
-            if 'comment_author' in c:
-                comment_out['name'] = c.get('comment_author')
-            if 'comment_author_email' in c:
-                comment_out['email'] = c.get('comment_author_email')
-            if 'comment_author_url' in c:
-                comment_out['url'] = c.get('comment_author_url')
-            if 'comment_content' in c:
-                # run fake wpautop on it
-                comment_body = autop.wpautop(c['comment_content'])
-                # then convert to markdown
-                comment_out['body'] = h.handle(comment_body).strip()
+                comment_out['_id'] = hashlib.md5(str(c.get('comment_id')).encode('utf-8')).hexdigest()
+                if post.get('post_name'):
+                    comment_out['_parent'] = post.get('post_name')
+                if 'comment_parent' in c and c['comment_parent'] != 0:
+                    comment_out['reply_to'] = hashlib.md5(str(c.get('comment_parent')).encode('utf-8')).hexdigest()
+                comment_out['date'] = c.get('comment_date_gmt', datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)).isoformat()
+                if 'comment_author' in c:
+                    comment_out['name'] = c.get('comment_author')
+                if 'comment_author_email' in c:
+                    comment_out['email'] = hashlib.md5(c.get('comment_author_email').encode('utf-8')).hexdigest()
+                if 'comment_author_url' in c:
+                    comment_out['url'] = c.get('comment_author_url')
+                if 'comment_content' in c:
+                    # run fake wpautop on it
+                    comment_body = autop.wpautop(c['comment_content'])
+                    # then convert to markdown
+                    comment_out['body'] = h.handle(comment_body).strip()
 
-            if not os.path.exists(comment_dir):
-                os.makedirs(comment_dir)
-            with open(comment_filepath, 'w') as f:
-                f.write(json.dumps(comment_out, indent=2))
+                if not os.path.exists(comment_dir):
+                    os.makedirs(comment_dir)
+                with open(comment_filepath, 'w') as f:
+                    f.write(json.dumps(comment_out, indent=2))
     return
 
 @click.command()
