@@ -23,9 +23,9 @@ def do_ww(tag_atts, tag_contents):
                 ww_item_count - 1] + ' ' + l.strip()
 
     OUTPUTS = {
-        '+': '{{% wwitem + %}}',
-        '-': '{{% wwitem - %}}',
-        '=': '{{% wwitem = %}}',
+        '+': '{{% wwitem "+" %}}',
+        '-': '{{% wwitem "-" %}}',
+        '=': '{{% wwitem "=" %}}',
     }
 
     h = html2text.HTML2Text()

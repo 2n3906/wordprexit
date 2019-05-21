@@ -77,7 +77,7 @@ def shortcodify(body: str):
             citation = cite.extract().decode_contents()
         shortcode = '{{% blockquote'
         if cite:
-            shortcode += ' cite="{}"'.format(citation)
+            shortcode += ' footer="{}"'.format(citation.replace('"', '&quot;'))
         shortcode += ' %}}\n'
         bq.insert_before(shortcode)
         bq.insert_after('\n{{% /blockquote %}}')
