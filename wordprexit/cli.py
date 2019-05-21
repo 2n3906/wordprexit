@@ -3,6 +3,11 @@
 import click
 import time
 import wxrfile
+import autop
+import ww_shortcode
+import wp_shortcodes
+import html2text
+
 
 import os
 import datetime
@@ -13,6 +18,15 @@ from ruamel.yaml import YAML  # import yaml
 
 yaml = YAML()
 yaml.default_flow_style = False
+
+def contains_wp_shortcodes(body, *sc):
+    """Search body for one or more shortcodes named sc"""
+    tagre = '|'.join(sc)
+    # terrible regex taken from Wordpress source
+    pattern = re.compile(
+    '\\[(\\[?)(' + tagre +
+    ')\\b([^\\]\\/]*(?:\\/(?!\\])[^\\]\\/]*)*?)(?:(\\/)\\]|\\](?:([^\\[]*(?:\\[(?!\\/\\2\\])[^\\[]*)*)\\[\\/\\2\\])?)(\\]?)')
+    return pattern.findall(body)
 
 
 def check_post_attachments(post: dict, allattach: dict):
@@ -52,6 +66,7 @@ def make_post_frontmatter(post):
     if post.get('excerpt'):
         front_matter['summary'] = post.get('excerpt')
     if post.get('author'):
+        # TODO: Fix me!
         # front_matter['author'] = post.get('author')
         front_matter['author'] = 'Scott Johnston'
     if post.get('categories'):
@@ -65,9 +80,39 @@ def make_post_frontmatter(post):
 
 
 def convert_post(post: dict):
-    #click.echo('converting {}'.format(post.get('title')))
-    #make_post_filename(post)
-    #click.echo(f)
+    body = post.get('body')
+    if contains_wp_shortcodes(body, 'ww'):
+        # post is a wisdom watch
+        body = ww_shortcode.parse(body)
+    else:
+        # post is HTML, so run fake wpautop on it
+        body = autop.wpautop(body)
+        # Turn Wordpress shortcodes into HTML
+        body = wp_shortcodes.parse(body)
+        # Parse HTML, replacing HTML attributes with Hugo shortcodes
+        htmlimages, soup = hugo_shortcodes.shortcodify(body)
+        if htmlimages:
+            has_attachments = True
+            # add detected images to our list
+            attachments_src.extend(htmlimages)
+        # Make body into Markdown
+        h = html2text.HTML2Text()
+        h.images_as_html = True
+        h.wrap_links = 0
+        h.inline_links = 0
+        body = h.handle(str(soup)).strip()
+        # Un-wrap Hugo shortcodes that got line-wrapped by html2text
+        body = re.sub(r'(?s)({{[\<\%] .*? [\>\%]}})', lambda match: match.group(1).replace('\n', ' '), body)
+
+    parentdir, tail = os.path.split(post['hugo_filepath'])
+    if not os.path.exists(parentdir):
+        os.makedirs(parentdir)
+    with open(post['hugo_filepath'], 'w') as f:
+        f.write('---\n')
+        yaml.dump(front_matter, f)
+        f.write('---\n')
+        f.write(body)        
+
     return
 
 
