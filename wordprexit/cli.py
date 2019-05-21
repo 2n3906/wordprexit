@@ -7,6 +7,9 @@ import autop
 import ww_shortcode
 import wp_shortcodes
 import html2text
+import hugo_shortcodes
+from urllib.parse import urlparse
+
 
 
 import os
@@ -26,12 +29,15 @@ def contains_wp_shortcodes(body, *sc):
     pattern = re.compile(
     '\\[(\\[?)(' + tagre +
     ')\\b([^\\]\\/]*(?:\\/(?!\\])[^\\]\\/]*)*?)(?:(\\/)\\]|\\](?:([^\\[]*(?:\\[(?!\\/\\2\\])[^\\[]*)*)\\[\\/\\2\\])?)(\\]?)')
-    return pattern.findall(body)
+    if body:
+        return pattern.findall(body)
+    else:
+        return False
 
 
 def check_post_attachments(post: dict, allattach: dict):
     # Scan HTML body for <img> tags, presuming we'll download these
-    if re.search(r'<img\s', post.get('body')):
+    if re.search(r'<img\s', post.get('body', '')):
         post['hugo_has_attachments'] = True
     # Also check for attachments known to Wordpress
     if [p for p in allattach if p.get('post_parent') == post.get('post_id')]:
@@ -78,6 +84,14 @@ def make_post_frontmatter(post):
     post['hugo_front_matter'] = front_matter
     return
 
+def add_resources_to_frontmatter(post: dict, allattach: dict):
+    attachments = [p for p in allattach if p.get('post_parent') == post.get('post_id')]
+    if attachments:
+        post['hugo_has_attachments'] = True  # redundant
+        post['hugo_front_matter']['resources'] = [{ 'src' : os.path.basename(urlparse(a.get('attachment_url')).path), 'title' : a.get('title')} for a in attachments]
+        post['hugo_attachments_src'] = [a.get('attachment_url') for a in attachments]
+    return
+
 
 def convert_post(post: dict):
     body = post.get('body')
@@ -90,17 +104,22 @@ def convert_post(post: dict):
         # Turn Wordpress shortcodes into HTML
         body = wp_shortcodes.parse(body)
         # Parse HTML, replacing HTML attributes with Hugo shortcodes
-        htmlimages, soup = hugo_shortcodes.shortcodify(body)
-        if htmlimages:
-            has_attachments = True
+        body, detectedhtmlimages = hugo_shortcodes.shortcodify(body)
+        if detectedhtmlimages:
+            post['hugo_has_attachments'] = True
             # add detected images to our list
-            attachments_src.extend(htmlimages)
+            # but first, remove any that look like IMAGENAME-WWWxHHH.jpg because we probably have the original
+            detectedhtmlimages = [a for a in detectedhtmlimages if not re.match(r'(.*)\-(\d+x\d+)\.(jpg|png)$', a)]
+            if 'hugo_attachments_src' in post:
+                post['hugo_attachments_src'].extend(detectedhtmlimages)
+            else:
+                post['hugo_attachments_src'] = detectedhtmlimages
         # Make body into Markdown
         h = html2text.HTML2Text()
         h.images_as_html = True
         h.wrap_links = 0
         h.inline_links = 0
-        body = h.handle(str(soup)).strip()
+        body = h.handle(body).strip()
         # Un-wrap Hugo shortcodes that got line-wrapped by html2text
         body = re.sub(r'(?s)({{[\<\%] .*? [\>\%]}})', lambda match: match.group(1).replace('\n', ' '), body)
 
@@ -109,12 +128,25 @@ def convert_post(post: dict):
         os.makedirs(parentdir)
     with open(post['hugo_filepath'], 'w') as f:
         f.write('---\n')
-        yaml.dump(front_matter, f)
+        yaml.dump(post.get('hugo_front_matter'), f)
         f.write('---\n')
-        f.write(body)        
+        f.write(body)
 
     return
 
+
+def convert_comments(post):
+    comments = post.get('comments')
+    if comments:
+        for c in comments:
+            comment_dir = os.path.join('data', 'comments', post['hugo_uniqueid'])
+            comment_fn = 'wordpress-{}.json'.format(c.get('comment_id', 'UNKNOWN'))
+            comment_filepath = os.path.join(comment_dir, comment_fn)
+            if not os.path.exists(comment_dir):
+                os.makedirs(comment_dir)
+            with open(comment_filepath, 'w') as f:
+                f.write(str(c))
+    return
 
 @click.command()
 @click.argument('wxr_file', type=click.Path(exists=True))
@@ -122,7 +154,7 @@ def main(wxr_file):
     """Convert a Wordpress WXR export to a Hugo site."""
     click.echo('Reading file {}...'.format(wxr_file))
     w = wxrfile.WXRFile(wxr_file)
-    all_posts = w.get_posts()[:13]
+    all_posts = w.get_posts()
     all_attachments = w.get_attachments()
 
     with click.progressbar(
@@ -131,6 +163,7 @@ def main(wxr_file):
             check_post_attachments(post, all_attachments)
             make_post_destinations(post)
             make_post_frontmatter(post)
+            add_resources_to_frontmatter(post, all_attachments)
 
     with click.progressbar(
             all_posts, label='Processing posts......', show_pos=True) as bar:
@@ -141,17 +174,18 @@ def main(wxr_file):
         for post in bar:
             pass
     with click.progressbar(
-            range(0, 10), label='Converting comments...',
-            show_pos=True) as bar:
-        for user in bar:
-            pass
+            all_posts, label='Converting comments...', show_pos=True) as bar:
+        for post in bar:
+            convert_comments(post)
+
+
     for post in all_posts:
         print('Post {}'.format(post.get('title')))
-        print('... file {}'.format(post.get('hugo_filepath')))
-        print('... pubDate   {}'.format(post.get('pubDate')))
-        print('... post_date {}'.format(post.get('post_date').isoformat()))
-        print('... post_gmt  {}'.format(post.get('post_date_gmt').isoformat()))
-        yaml.dump(post.get('hugo_front_matter'), sys.stdout)
+        #print('... file {}'.format(post.get('hugo_filepath')))
+        #print('... pubDate   {}'.format(post.get('pubDate')))
+        #print('... post_date {}'.format(post.get('post_date').isoformat()))
+        #print('... post_gmt  {}'.format(post.get('post_date_gmt').isoformat()))
+        #yaml.dump(post.get('hugo_front_matter'), sys.stdout)
 
 
 # delete me

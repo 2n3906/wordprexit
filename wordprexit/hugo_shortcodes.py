@@ -13,6 +13,7 @@ def shortcodify(body: str):
         link = fig.find('a')
         href = None
         caption = None
+        src = None
         if link:
             # This image is wrapped in a link
             href = link.get('href')
@@ -71,9 +72,9 @@ def shortcodify(body: str):
 
     # <blockquote> -> {{% blockquote %}}
     for bq in soup('blockquote'):
-        cite = bq.cite.extract()
+        cite = bq.cite
         if cite:
-            citation = cite.decode_contents()
+            citation = cite.extract().decode_contents()
         shortcode = '{{% blockquote'
         if cite:
             shortcode += ' cite="{}"'.format(citation)
