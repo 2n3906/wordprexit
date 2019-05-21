@@ -150,6 +150,8 @@ class WXRFile(object):
                 if 'comment_approved' in comment:
                     comment['comment_approved'] = bool(
                         comment['comment_parent'])
+                if 'comment_id' in comment:
+                    comment['comment_id'] = int(comment['comment_id'])
                 if 'comment_parent' in comment:
                     comment['comment_parent'] = int(comment['comment_parent'])
                 if 'comment_user_id' in comment:
