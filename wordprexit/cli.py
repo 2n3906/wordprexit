@@ -151,6 +151,7 @@ def convert_post(post: dict):
 
     return
 
+
 def download_attachments(post, blog_url):
     if post.get('hugo_bundlepath'):
         if not os.path.exists(post.get('hugo_bundlepath')):
@@ -167,7 +168,8 @@ def download_attachments(post, blog_url):
                         f.write(chunk)
                 if 'last-modified' in r.headers:
                     # set file mtime to time provided by web server
-                    ts = dateutil.parser.parse(r.headers['last-modified']).timestamp()
+                    ts = dateutil.parser.parse(
+                        r.headers['last-modified']).timestamp()
                     os.utime(fullpath, (ts, ts))
             else:
                 click.echo('ERROR {} on {}'.format(r.status_code, u))
@@ -190,12 +192,15 @@ def convert_comments(post):
 
                 comment_out['_id'] = hashlib.md5(
                     str(c.get('comment_id')).encode('utf-8')).hexdigest()
+                if 'comment_parent' in c:
+                    if c['comment_parent'] != 0:
+                        comment_out['_parent'] = hashlib.md5(
+                            str(c.get('comment_parent')).encode(
+                                'utf-8')).hexdigest()
+                    else:
+                        comment_out['_parent'] = post.get('post_name')
                 if post.get('post_name'):
-                    comment_out['_parent'] = post.get('post_name')
-                if 'comment_parent' in c and c['comment_parent'] != 0:
-                    comment_out['reply_to'] = hashlib.md5(
-                        str(c.get('comment_parent')).encode(
-                            'utf-8')).hexdigest()
+                    comment_out['slug'] = post.get('post_name')
                 comment_out['date'] = c.get(
                     'comment_date_gmt',
                     datetime.datetime(
@@ -246,14 +251,14 @@ def main(wxr_file):
     with click.progressbar(
             all_posts, label='Adding attachments....', show_pos=True) as bar:
         for post in bar:
-            #download_attachments(post, w.blog_url)
-            pass
+            download_attachments(post, w.blog_url)
     with click.progressbar(
             all_posts, label='Converting comments...', show_pos=True) as bar:
         for post in bar:
             convert_comments(post)
 
     click.echo('Done.')
+
 
 # delete me
 if __name__ == '__main__':
