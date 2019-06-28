@@ -2,11 +2,11 @@
 
 import click
 import time
-import wxrfile
-import autop
-import wp_shortcodes
+from .wxrfile import WXRFile
+from .autop import wpautop
+from .wp_shortcodes import parse_shortcodes
 import html2text
-import hugo_shortcodes
+from .hugo_shortcodes import shortcodify
 from urllib.parse import urlparse, urljoin
 import json
 import requests
@@ -106,11 +106,11 @@ def add_resources_to_frontmatter(post: dict, allattach: dict):
 def convert_post(post: dict):
     body = post.get('body')
     # post is HTML, so run fake wpautop on it
-    body = autop.wpautop(body)
+    body = wpautop(body)
     # Turn Wordpress shortcodes into HTML
-    body = wp_shortcodes.parse(body)
+    body = parse_shortcodes(body)
     # Parse HTML, replacing HTML attributes with Hugo shortcodes
-    body, detectedhtmlimages = hugo_shortcodes.shortcodify(body)
+    body, detectedhtmlimages = shortcodify(body)
     if detectedhtmlimages:
         post['hugo_has_attachments'] = True
         # add detected images to our list
@@ -209,7 +209,7 @@ def convert_comments(post):
                     comment_out['url'] = c.get('comment_author_url')
                 if 'comment_content' in c:
                     # run fake wpautop on it
-                    comment_body = autop.wpautop(c['comment_content'])
+                    comment_body = wpautop(c['comment_content'])
                     # then convert to markdown
                     comment_out['message'] = h.handle(comment_body).strip()
 
@@ -220,12 +220,12 @@ def convert_comments(post):
     return
 
 
-@click.command()
+@click.command(context_settings={'help_option_names':['-h','--help']})
 @click.argument('wxr_file', type=click.Path(exists=True))
 def main(wxr_file):
     """Convert a Wordpress WXR export to a Hugo site."""
     click.echo('Reading file {}...'.format(wxr_file))
-    w = wxrfile.WXRFile(wxr_file)
+    w = WXRFile(wxr_file)
     all_posts = w.get_posts()
     all_attachments = w.get_attachments()
 

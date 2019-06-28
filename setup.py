@@ -16,7 +16,6 @@ setup(
     include_package_data=True,
     zip_safe=False,
     platforms='any',
-    install_requires=dependencies,
     entry_points={
         'console_scripts': [
             'wordprexit = wordprexit.cli:main',

@@ -60,7 +60,7 @@ def parse_shortcode_atts(atts):
     return re.findall(pattern, atts)
 
 
-def parse(post_body):
+def parse_shortcodes(post_body):
     """
     I stole this shortcode regex from Wordpress's source.  It is very confusing.
     """
