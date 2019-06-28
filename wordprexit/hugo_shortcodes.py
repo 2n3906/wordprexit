@@ -43,7 +43,7 @@ def shortcodify(body: str):
         fig.decompose() # destroy original figure tag
 
     # <img> -> {{% img %}}
-    # Also maps Wordpress class="alignright" to class="marginnote" 
+    # Also maps Wordpress class="alignright" to class="float-right", etc. 
     for img in soup('img'):
         link = img.findParent('a')
         href = None
@@ -65,7 +65,9 @@ def shortcodify(body: str):
         if href:
             shortcode += ' link="{}"'.format(href)
         if 'alignright' in img.get('class', []):
-            shortcode += ' class="marginnote"'
+            shortcode += ' class="float-right"'
+        if 'alignleft' in img.get('class', []):
+            shortcode += ' class="float-left"'
         shortcode += ' %}}'
         img.insert_before(shortcode)
         img.decompose() # destroy original img tag

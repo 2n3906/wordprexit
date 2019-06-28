@@ -4,7 +4,6 @@ import click
 import time
 import wxrfile
 import autop
-import ww_shortcode
 import wp_shortcodes
 import html2text
 import hugo_shortcodes
@@ -70,14 +69,12 @@ def make_post_frontmatter(post):
         'date': post.get('post_date').isoformat(),
         'lastmod': post.get('post_date').isoformat(),
         'slug': post.get('post_name', 'UNTITLED'),
-        'type': 'post',
+        'type': 'posts',
     }
     if post.get('excerpt'):
         front_matter['summary'] = post.get('excerpt')
     if post.get('author'):
-        # TODO: Fix me!
-        # front_matter['author'] = post.get('author')
-        front_matter['author'] = 'Scott Johnston'
+        front_matter['author'] = post.get('author')
     if post.get('categories'):
         front_matter['categories'] = post.get('categories')
     if post.get('tags'):
@@ -108,37 +105,33 @@ def add_resources_to_frontmatter(post: dict, allattach: dict):
 
 def convert_post(post: dict):
     body = post.get('body')
-    if contains_wp_shortcodes(body, 'ww'):
-        # post is a wisdom watch
-        body = ww_shortcode.parse(body)
-    else:
-        # post is HTML, so run fake wpautop on it
-        body = autop.wpautop(body)
-        # Turn Wordpress shortcodes into HTML
-        body = wp_shortcodes.parse(body)
-        # Parse HTML, replacing HTML attributes with Hugo shortcodes
-        body, detectedhtmlimages = hugo_shortcodes.shortcodify(body)
-        if detectedhtmlimages:
-            post['hugo_has_attachments'] = True
-            # add detected images to our list
-            # but first, remove any that look like IMAGENAME-WWWxHHH.jpg because we probably have the original
-            detectedhtmlimages = [
-                a for a in detectedhtmlimages
-                if not re.match(r'(.*)\-(\d+x\d+)\.(jpg|png)$', a)
-            ]
-            if 'hugo_attachments_src' in post:
-                post['hugo_attachments_src'].extend(detectedhtmlimages)
-            else:
-                post['hugo_attachments_src'] = detectedhtmlimages
-        # Make body into Markdown
-        h = html2text.HTML2Text()
-        h.images_as_html = True
-        h.wrap_links = 0
-        h.inline_links = 0
-        body = h.handle(body).strip()
-        # Un-wrap Hugo shortcodes that got line-wrapped by html2text
-        body = re.sub(r'(?s)({{[\<\%].*?[\>\%]}})', lambda match: match.group(
-            1).replace('\n', ' '), body)
+    # post is HTML, so run fake wpautop on it
+    body = autop.wpautop(body)
+    # Turn Wordpress shortcodes into HTML
+    body = wp_shortcodes.parse(body)
+    # Parse HTML, replacing HTML attributes with Hugo shortcodes
+    body, detectedhtmlimages = hugo_shortcodes.shortcodify(body)
+    if detectedhtmlimages:
+        post['hugo_has_attachments'] = True
+        # add detected images to our list
+        # but first, remove any that look like IMAGENAME-WWWxHHH.jpg because we probably have the original
+        detectedhtmlimages = [
+            a for a in detectedhtmlimages
+            if not re.match(r'(.*)\-(\d+x\d+)\.(jpg|png)$', a)
+        ]
+        if 'hugo_attachments_src' in post:
+            post['hugo_attachments_src'].extend(detectedhtmlimages)
+        else:
+            post['hugo_attachments_src'] = detectedhtmlimages
+    # Make body into Markdown
+    h = html2text.HTML2Text()
+    h.images_as_html = True
+    h.wrap_links = 0
+    h.inline_links = 0
+    body = h.handle(body).strip()
+    # Un-wrap Hugo shortcodes that got line-wrapped by html2text
+    body = re.sub(r'(?s)({{[\<\%].*?[\>\%]}})', lambda match: match.group(1).
+                  replace('\n', ' '), body)
 
     parentdir, tail = os.path.split(post['hugo_filepath'])
     if not os.path.exists(parentdir):
@@ -218,7 +211,7 @@ def convert_comments(post):
                     # run fake wpautop on it
                     comment_body = autop.wpautop(c['comment_content'])
                     # then convert to markdown
-                    comment_out['body'] = h.handle(comment_body).strip()
+                    comment_out['message'] = h.handle(comment_body).strip()
 
                 if not os.path.exists(comment_dir):
                     os.makedirs(comment_dir)
@@ -258,8 +251,3 @@ def main(wxr_file):
             convert_comments(post)
 
     click.echo('Done.')
-
-
-# delete me
-if __name__ == '__main__':
-    main()

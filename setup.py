@@ -1,5 +1,5 @@
 """
-EConvert a Wordpress WXR export to a Hugo site.
+Convert a Wordpress WXR export to a Hugo static site.
 """
 from setuptools import find_packages, setup
 
@@ -12,7 +12,7 @@ setup(
     license='BSD',
     author='Scott Johnston',
     author_email='sjohnston@alum.mit.edu',
-    description='EConvert a Wordpress WXR export to a Hugo site.',
+    description='Convert a Wordpress WXR export to a Hugo static site.',
     long_description=__doc__,
     packages=find_packages(exclude=['tests']),
     include_package_data=True,
@@ -35,13 +35,11 @@ setup(
         # 'Development Status :: 7 - Inactive',
         'Environment :: Console',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: BSD License',
         'Operating System :: POSIX',
         'Operating System :: MacOS',
         'Operating System :: Unix',
         'Operating System :: Microsoft :: Windows',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ]
