@@ -1,0 +1,8 @@
+tzlocal
+requests
+html2text
+click
+pytz
+beautifulsoup4
+python-dateutil
+ruamel.yaml

@@ -3,8 +3,6 @@ Convert a Wordpress WXR export to a Hugo static site.
 """
 from setuptools import find_packages, setup
 
-dependencies = ['click']
-
 setup(
     name='wordprexit',
     version='0.0.1',
