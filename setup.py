@@ -1,21 +1,35 @@
 """
 Convert a Wordpress WXR export to a Hugo static site.
 """
-from setuptools import find_packages, setup
+import setuptools
 
-setup(
-    name='wordprexit',
-    version='0.0.1',
-    url='https://github.com/2n3906/wordprexit',
-    license='BSD',
-    author='Scott Johnston',
-    author_email='sjohnston@alum.mit.edu',
-    description='Convert a Wordpress WXR export to a Hugo static site.',
-    long_description=__doc__,
-    packages=find_packages(exclude=['tests']),
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+setuptools.setup(
+    name="wordprexit",
+    version="0.0.2",
+    url="https://github.com/2n3906/wordprexit",
+    license='MIT',
+    author="Scott Johnston",
+    author_email="sjohnston@alum.mit.edu",
+    description="Convert a Wordpress WXR export to a Hugo static site.",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    packages=setuptools.find_packages(),
     include_package_data=True,
     zip_safe=False,
     platforms='any',
+    install_requires=[
+        "beautifulsoup4",
+        "click",
+        "html2text",
+        "python-dateutil",
+        "pytz",
+        "requests",
+        "ruamel.yaml",
+        "tzlocal",
+    ],
     entry_points={
         'console_scripts': [
             'wordprexit = wordprexit.cli:main',
@@ -32,12 +46,8 @@ setup(
         # 'Development Status :: 7 - Inactive',
         'Environment :: Console',
         'Intended Audience :: Developers',
-        'Operating System :: POSIX',
-        'Operating System :: MacOS',
-        'Operating System :: Unix',
-        'Operating System :: Microsoft :: Windows',
-        'Programming Language :: Python',
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
-        'Topic :: Software Development :: Libraries :: Python Modules',
     ]
 )
